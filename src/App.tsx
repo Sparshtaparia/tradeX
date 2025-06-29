@@ -13,6 +13,7 @@ import Portfolio from "./pages/Portfolio";
 import AIInsights from "./pages/AIInsights";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
