@@ -1,96 +1,159 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
-import { MessageCircle, Brain, Send, Lightbulb, TrendingUp, AlertTriangle } from "lucide-react";
+import { Brain, Send, TrendingUp, TrendingDown, AlertTriangle, Bot, User, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+interface Message {
+  id: string;
+  content: string;
+  isBot: boolean;
+  timestamp: Date;
+}
+
+interface AIInsight {
+  id: string;
+  symbol?: string;
+  insight_type: 'BUY' | 'SELL' | 'HOLD' | 'ALERT';
+  title: string;
+  description: string;
+  confidence_score?: number;
+  created_at: string;
+  is_read: boolean;
+}
 
 const AIInsights = () => {
-  const [chatMessages, setChatMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: 1,
-      type: "ai",
-      message: "Hello! I'm your AI trading assistant powered by DeepSeek V3. I can help you with market analysis, trading strategies, and investment recommendations. What would you like to know?",
-      timestamp: new Date().toLocaleTimeString()
+      id: '1',
+      content: "Hello! I'm your AI trading assistant. I can help you analyze stocks, provide market insights, and suggest trading strategies. What would you like to know?",
+      isBot: true,
+      timestamp: new Date()
     }
   ]);
-  const [currentMessage, setCurrentMessage] = useState("");
+  const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
-  const insights = [
-    {
-      type: "opportunity",
-      title: "Market Opportunity Detected",
-      message: "Banking sector showing strong momentum. Consider positions in HDFC Bank and ICICI Bank.",
-      confidence: 85,
-      icon: TrendingUp,
-      color: "text-trading-green"
-    },
-    {
-      type: "warning",
-      title: "Risk Alert",
-      message: "High volatility expected in IT sector due to global uncertainties. Monitor positions carefully.",
-      confidence: 92,
-      icon: AlertTriangle,
-      color: "text-trading-red"
-    },
-    {
-      type: "recommendation",
-      title: "Portfolio Rebalancing",
-      message: "Consider reducing exposure to energy sector and increasing allocation to financials.",
-      confidence: 78,
-      icon: Lightbulb,
-      color: "text-trading-gold"
-    }
-  ];
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentMessage.trim()) return;
-
-    const userMessage = {
-      id: Date.now(),
-      type: "user",
-      message: currentMessage,
-      timestamp: new Date().toLocaleTimeString()
-    };
-
-    setChatMessages(prev => [...prev, userMessage]);
-    setCurrentMessage("");
-    setIsTyping(true);
-
-    // Simulate AI response (replace with actual DeepSeek API call)
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        type: "ai",
-        message: generateAIResponse(currentMessage),
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setChatMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 2000);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const generateAIResponse = (userMessage: string) => {
-    // This would be replaced with actual DeepSeek API call
+  useEffect(scrollToBottom, [messages]);
+
+  const getAIResponse = async (userMessage: string): Promise<string> => {
+    // Simulate AI processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const lowerMessage = userMessage.toLowerCase();
+    
+    if (lowerMessage.includes('reliance') || lowerMessage.includes('ril')) {
+      return "📈 **Reliance Industries Analysis:**\n\nBased on current market trends:\n- **Price**: ₹2,456.75 (+0.96%)\n- **Recommendation**: HOLD\n- **Target**: ₹2,650 (next 3 months)\n- **Support**: ₹2,300\n\n**Key Factors:**\n• Strong Q3 results expected\n• Oil prices stabilizing\n• Jio monetization improving\n\n*Confidence: 78%*";
+    }
+    
+    if (lowerMessage.includes('tcs') || lowerMessage.includes('tata consultancy')) {
+      return "💻 **TCS Stock Outlook:**\n\nCurrent Analysis:\n- **Price**: ₹3,789.20 (-1.19%)\n- **Recommendation**: BUY on dips\n- **Target**: ₹4,100 (6 months)\n- **Stop Loss**: ₹3,500\n\n**Reasons:**\n• Strong order book growth\n• Dollar revenue acceleration\n• Digital transformation deals\n\n*Confidence: 82%*";
+    }
+
+    if (lowerMessage.includes('market') && lowerMessage.includes('tomorrow')) {
+      return "🔮 **Tomorrow's Market Outlook:**\n\n**NIFTY Prediction**: Likely to open flat to positive\n**Key Levels**: 22,400 (Support) | 22,600 (Resistance)\n\n**Sectors to Watch:**\n• Banking (+ve bias)\n• IT (mixed signals)\n• Auto (cautious)\n\n**Events**: No major announcements expected\n\n*Trade with caution and proper risk management*";
+    }
+
+    if (lowerMessage.includes('buy') || lowerMessage.includes('invest')) {
+      return "💡 **Investment Recommendations:**\n\n**Top Picks for This Week:**\n\n1. **HDFC Bank** - Strong fundamentals\n2. **Asian Paints** - Seasonal demand\n3. **Wipro** - Undervalued IT play\n\n**Strategy**: SIP approach recommended\n**Risk Level**: Medium\n**Time Horizon**: 6-12 months\n\n*Always diversify and invest only what you can afford to lose*";
+    }
+
+    // Default responses for common queries
     const responses = [
-      "Based on current market trends and your query, I recommend monitoring the sectors you mentioned closely. The Indian market is showing positive momentum in banking and pharma sectors.",
-      "That's an interesting question about market timing. Generally, it's better to focus on fundamental analysis rather than trying to time the market perfectly. Would you like me to analyze any specific stocks?",
-      "For long-term investing in the Indian market, consider diversifying across sectors like IT, banking, and consumer goods. The current valuations in these sectors look attractive.",
-      "Market volatility is normal and can present opportunities. I suggest maintaining a balanced portfolio and avoiding emotional decisions. What's your investment timeline?"
+      "I'd be happy to help with that! For specific stock analysis, please mention the company name. I can provide insights on price targets, technical analysis, and market sentiment.",
+      "Based on current market conditions, I suggest focusing on quality stocks with strong fundamentals. Would you like me to analyze any particular sector?",
+      "The Indian market is showing mixed signals today. Banking stocks are outperforming while IT is under pressure. What specific area interests you?",
+      "For better investment decisions, consider your risk appetite and time horizon. Would you like a customized portfolio suggestion based on your profile?"
     ];
+
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-  const quickQuestions = [
-    "Should I buy or sell tomorrow?",
-    "What are the top stocks to watch?",
-    "How is my portfolio performing?",
-    "Market outlook for next week?"
-  ];
+  const sendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      isBot: false,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage("");
+    setIsTyping(true);
+
+    try {
+      const aiResponse = await getAIResponse(inputMessage);
+      
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: aiResponse,
+        isBot: true,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      toast.error("Failed to get AI response");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const fetchInsights = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching insights:', error);
+    } else {
+      setInsights(data || []);
+    }
+  };
+
+  useEffect(() => {
+    fetchInsights();
+  }, [user]);
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'BUY': return <TrendingUp className="h-4 w-4 text-trading-green" />;
+      case 'SELL': return <TrendingDown className="h-4 w-4 text-trading-red" />;
+      case 'HOLD': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case 'ALERT': return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      default: return <Brain className="h-4 w-4 text-trading-gold" />;
+    }
+  };
+
+  const getInsightColor = (type: string) => {
+    switch (type) {
+      case 'BUY': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'SELL': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'HOLD': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'ALERT': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      default: return 'bg-trading-gold/20 text-trading-gold border-trading-gold/30';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-dark">
@@ -100,132 +163,170 @@ const AIInsights = () => {
         <div className="container mx-auto">
           {/* Header */}
           <div className="mb-8 animate-fade-in">
-            <h1 className="text-4xl font-bold gradient-text mb-2">AI Insights</h1>
-            <p className="text-gray-300">Get intelligent trading recommendations powered by AI</p>
+            <h1 className="text-4xl font-bold gradient-text mb-2 flex items-center">
+              <Brain className="w-10 h-10 mr-3 text-trading-gold" />
+              AI Trading Insights
+            </h1>
+            <p className="text-gray-300">Get personalized recommendations and market analysis powered by AI</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* AI Insights Cards */}
-            <div className="lg:col-span-1 space-y-6">
-              <Card className="glass-card glow-border animate-slide-up">
-                <CardHeader>
-                  <CardTitle className="text-trading-gold flex items-center">
-                    <Brain className="w-5 h-5 mr-2" />
-                    Current Insights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {insights.map((insight, index) => (
-                    <div 
-                      key={index} 
-                      className="p-4 rounded-lg bg-trading-card/30 border border-trading-gold/20 animate-fade-in"
-                      style={{ animationDelay: `${index * 0.2}s` }}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <insight.icon className={`w-5 h-5 mt-1 ${insight.color}`} />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-white mb-1">{insight.title}</h4>
-                          <p className="text-gray-300 text-sm mb-2">{insight.message}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-400">Confidence</span>
-                            <span className={`text-xs font-medium ${insight.color}`}>
-                              {insight.confidence}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card glow-border animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                <CardHeader>
-                  <CardTitle className="text-trading-gold">Quick Questions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {quickQuestions.map((question, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      className="w-full text-left justify-start border-trading-gold/30 text-gray-300 hover:bg-trading-gold hover:text-trading-dark transition-all"
-                      onClick={() => setCurrentMessage(question)}
-                    >
-                      {question}
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Chat Interface */}
+            {/* AI Chat Assistant */}
             <div className="lg:col-span-2">
-              <Card className="glass-card glow-border h-[600px] flex flex-col animate-fade-in">
-                <CardHeader>
+              <Card className="glass-card glow-border h-[600px] flex flex-col">
+                <CardHeader className="pb-4">
                   <CardTitle className="text-trading-gold flex items-center">
-                    <MessageCircle className="w-5 h-5 mr-2" />
+                    <Bot className="w-5 h-5 mr-2" />
                     AI Trading Assistant
+                    <Sparkles className="w-4 h-4 ml-2 text-yellow-400" />
                   </CardTitle>
                   <CardDescription className="text-gray-300">
-                    Powered by DeepSeek V3 - Ask me anything about trading and investments
+                    Ask me anything about stocks, market trends, or trading strategies
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col">
                   {/* Messages */}
                   <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
-                    {chatMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[80%] p-4 rounded-lg ${
-                            message.type === 'user'
-                              ? 'bg-gradient-gold text-trading-dark'
-                              : 'bg-trading-card/50 text-white border border-trading-gold/20'
-                          }`}
-                        >
-                          <p className="text-sm mb-1">{message.message}</p>
-                          <span className={`text-xs ${
-                            message.type === 'user' ? 'text-trading-dark/70' : 'text-gray-400'
-                          }`}>
-                            {message.timestamp}
-                          </span>
+                    {messages.map((message) => (
+                      <div key={message.id} className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`max-w-[80%] p-3 rounded-lg ${
+                          message.isBot 
+                            ? 'bg-trading-card border border-trading-gold/20' 
+                            : 'bg-gradient-gold text-trading-dark'
+                        }`}>
+                          <div className="flex items-start space-x-2">
+                            {message.isBot ? (
+                              <Bot className="w-4 h-4 mt-1 text-trading-gold flex-shrink-0" />
+                            ) : (
+                              <User className="w-4 h-4 mt-1 flex-shrink-0" />
+                            )}
+                            <div className="flex-1">
+                              <p className={`text-sm ${message.isBot ? 'text-white' : 'text-trading-dark'} whitespace-pre-wrap`}>
+                                {message.content}
+                              </p>
+                              <p className={`text-xs mt-2 ${message.isBot ? 'text-gray-400' : 'text-trading-dark/70'}`}>
+                                {message.timestamp.toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
-
+                    
                     {isTyping && (
                       <div className="flex justify-start">
-                        <div className="bg-trading-card/50 text-white border border-trading-gold/20 p-4 rounded-lg">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="bg-trading-card border border-trading-gold/20 p-3 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <Bot className="w-4 h-4 text-trading-gold" />
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-trading-gold rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
+                    <div ref={messagesEndRef} />
                   </div>
 
                   {/* Input */}
-                  <form onSubmit={handleSendMessage} className="flex space-x-2">
+                  <div className="flex space-x-2">
                     <Input
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Ask me about market trends, stocks to buy, trading strategies..."
+                      placeholder="Ask me about stocks, market trends, or get trading advice..."
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                       className="flex-1 bg-trading-card border-trading-gold/30 text-white placeholder:text-gray-400 focus:border-trading-gold"
-                      disabled={isTyping}
                     />
                     <Button 
-                      type="submit" 
-                      disabled={isTyping || !currentMessage.trim()}
+                      onClick={sendMessage}
+                      disabled={!inputMessage.trim() || isTyping}
                       className="bg-gradient-gold text-trading-dark hover:opacity-90"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
-                  </form>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* AI Insights Panel */}
+            <div className="space-y-6">
+              <Card className="glass-card glow-border">
+                <CardHeader>
+                  <CardTitle className="text-trading-gold">Recent Insights</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {insights.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-400">No insights yet</p>
+                        <p className="text-sm text-gray-500">Start chatting with the AI to get personalized insights</p>
+                      </div>
+                    ) : (
+                      insights.map((insight) => (
+                        <div key={insight.id} className="p-4 rounded-lg bg-trading-card/30 border border-trading-gold/20">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              {getInsightIcon(insight.insight_type)}
+                              <Badge className={getInsightColor(insight.insight_type)}>
+                                {insight.insight_type}
+                              </Badge>
+                            </div>
+                            {insight.confidence_score && (
+                              <span className="text-xs text-gray-400">
+                                {insight.confidence_score}% confidence
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-white mb-1">{insight.title}</h4>
+                          <p className="text-sm text-gray-300 mb-2">{insight.description}</p>
+                          {insight.symbol && (
+                            <p className="text-xs text-trading-gold">Symbol: {insight.symbol}</p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-2">
+                            {new Date(insight.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card className="glass-card glow-border">
+                <CardHeader>
+                  <CardTitle className="text-trading-gold">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    onClick={() => setInputMessage("What are the top stock picks for this week?")}
+                    className="w-full justify-start bg-trading-card/50 border border-trading-gold/30 text-white hover:bg-trading-gold hover:text-trading-dark"
+                  >
+                    📈 Weekly Stock Picks
+                  </Button>
+                  <Button 
+                    onClick={() => setInputMessage("Should I buy or sell tomorrow?")}
+                    className="w-full justify-start bg-trading-card/50 border border-trading-gold/30 text-white hover:bg-trading-gold hover:text-trading-dark"
+                  >
+                    🔮 Tomorrow's Market Outlook
+                  </Button>
+                  <Button 
+                    onClick={() => setInputMessage("Analyze RELIANCE stock for me")}
+                    className="w-full justify-start bg-trading-card/50 border border-trading-gold/30 text-white hover:bg-trading-gold hover:text-trading-dark"
+                  >
+                    🔍 Stock Analysis
+                  </Button>
+                  <Button 
+                    onClick={() => setInputMessage("What's the current market sentiment?")}
+                    className="w-full justify-start bg-trading-card/50 border border-trading-gold/30 text-white hover:bg-trading-gold hover:text-trading-dark"
+                  >
+                    📊 Market Sentiment
+                  </Button>
                 </CardContent>
               </Card>
             </div>

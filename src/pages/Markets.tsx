@@ -1,104 +1,229 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
-import { Search, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Star, Plus, Eye } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+// Indian Stock Market Data
+const INDIAN_MARKETS = [
+  {
+    symbol: "RELIANCE",
+    name: "Reliance Industries Ltd",
+    price: 2456.75,
+    change: 23.45,
+    changePercent: 0.96,
+    volume: "12.5M",
+    marketCap: "16.6L Cr",
+    sector: "Oil & Gas"
+  },
+  {
+    symbol: "TCS",
+    name: "Tata Consultancy Services",
+    price: 3789.20,
+    change: -45.80,
+    changePercent: -1.19,
+    volume: "8.2M",
+    marketCap: "13.8L Cr",
+    sector: "IT Services"
+  },
+  {
+    symbol: "HDFCBANK",
+    name: "HDFC Bank Ltd",
+    price: 1654.30,
+    change: 18.75,
+    changePercent: 1.15,
+    volume: "15.6M",
+    marketCap: "12.5L Cr",
+    sector: "Banking"
+  },
+  {
+    symbol: "INFY",
+    name: "Infosys Ltd",
+    price: 1789.45,
+    change: -12.30,
+    changePercent: -0.68,
+    volume: "9.8M",
+    marketCap: "7.4L Cr",
+    sector: "IT Services"
+  },
+  {
+    symbol: "ICICIBANK",
+    name: "ICICI Bank Ltd",
+    price: 1098.60,
+    change: 34.20,
+    changePercent: 3.21,
+    volume: "18.9M",
+    marketCap: "7.7L Cr",
+    sector: "Banking"
+  },
+  {
+    symbol: "HINDUNILVR",
+    name: "Hindustan Unilever Ltd",
+    price: 2234.80,
+    change: -8.45,
+    changePercent: -0.38,
+    volume: "4.2M",
+    marketCap: "5.2L Cr",
+    sector: "FMCG"
+  },
+  {
+    symbol: "ITC",
+    name: "ITC Ltd",
+    price: 456.75,
+    change: 12.30,
+    changePercent: 2.77,
+    volume: "25.6M",
+    marketCap: "5.7L Cr",
+    sector: "FMCG"
+  },
+  {
+    symbol: "SBIN",
+    name: "State Bank of India",
+    price: 789.20,
+    change: 28.45,
+    changePercent: 3.74,
+    volume: "32.1M",
+    marketCap: "7.0L Cr",
+    sector: "Banking"
+  },
+  {
+    symbol: "BHARTIARTL",
+    name: "Bharti Airtel Ltd",
+    price: 1245.60,
+    change: -15.80,
+    changePercent: -1.25,
+    volume: "11.2M",
+    marketCap: "6.8L Cr",
+    sector: "Telecom"
+  },
+  {
+    symbol: "KOTAKBANK",
+    name: "Kotak Mahindra Bank",
+    price: 1876.45,
+    change: 45.20,
+    changePercent: 2.47,
+    volume: "7.8M",
+    marketCap: "3.7L Cr",
+    sector: "Banking"
+  },
+  {
+    symbol: "LT",
+    name: "Larsen & Toubro Ltd",
+    price: 3456.80,
+    change: 67.45,
+    changePercent: 1.99,
+    volume: "5.9M",
+    marketCap: "4.9L Cr",
+    sector: "Construction"
+  },
+  {
+    symbol: "HCLTECH",
+    name: "HCL Technologies Ltd",
+    price: 1567.30,
+    change: -23.45,
+    changePercent: -1.47,
+    volume: "6.7M",
+    marketCap: "4.2L Cr",
+    sector: "IT Services"
+  },
+  {
+    symbol: "ASIANPAINT",
+    name: "Asian Paints Ltd",
+    price: 2987.65,
+    change: 38.90,
+    changePercent: 1.32,
+    volume: "3.4M",
+    marketCap: "2.9L Cr",
+    sector: "Paints"
+  },
+  {
+    symbol: "MARUTI",
+    name: "Maruti Suzuki India Ltd",
+    price: 10876.45,
+    change: -145.30,
+    changePercent: -1.32,
+    volume: "2.1M",
+    marketCap: "3.3L Cr",
+    sector: "Automobile"
+  },
+  {
+    symbol: "WIPRO",
+    name: "Wipro Ltd",
+    price: 567.80,
+    change: 12.45,
+    changePercent: 2.24,
+    volume: "14.5M",
+    marketCap: "3.1L Cr",
+    sector: "IT Services"
+  }
+];
 
 const Markets = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [marketData, setMarketData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [selectedSector, setSelectedSector] = useState("All");
+  const { user } = useAuth();
 
-  // Mock data for demonstration - replace with actual API call
-  const mockMarketData = [
-    {
-      symbol: "RELIANCE.NS",
-      name: "Reliance Industries Ltd",
-      price: 2456.75,
-      change: 45.30,
-      changePercent: 1.88,
-      volume: 1234567,
-      high: 2470.00,
-      low: 2420.50
-    },
-    {
-      symbol: "TCS.NS", 
-      name: "Tata Consultancy Services",
-      price: 3890.20,
-      change: -23.45,
-      changePercent: -0.60,
-      volume: 987654,
-      high: 3920.00,
-      low: 3875.30
-    },
-    {
-      symbol: "HDFCBANK.NS",
-      name: "HDFC Bank Limited",
-      price: 1678.90,
-      change: 12.85,
-      changePercent: 0.77,
-      volume: 2345678,
-      high: 1685.00,
-      low: 1665.40
-    },
-    {
-      symbol: "INFY.NS",
-      name: "Infosys Limited",
-      price: 1823.45,
-      change: -8.70,
-      changePercent: -0.47,
-      volume: 1456789,
-      high: 1835.20,
-      low: 1815.60
-    },
-    {
-      symbol: "ICICIBANK.NS",
-      name: "ICICI Bank Limited", 
-      price: 1245.60,
-      change: 18.90,
-      changePercent: 1.54,
-      volume: 3456789,
-      high: 1250.30,
-      low: 1230.80
-    }
-  ];
+  const sectors = ["All", ...new Set(INDIAN_MARKETS.map(stock => stock.sector))];
 
-  const fetchMarketData = async () => {
-    setLoading(true);
-    setError("");
-    
+  const filteredStocks = INDIAN_MARKETS.filter(stock => {
+    const matchesSearch = stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         stock.symbol.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSector = selectedSector === "All" || stock.sector === selectedSector;
+    return matchesSearch && matchesSector;
+  });
+
+  const addToWatchlist = async (symbol: string, companyName: string) => {
+    if (!user) return;
+
     try {
-      // Here you would use the actual Indian stock market API
-      // const response = await fetch('https://api.example.com/stocks', {
-      //   headers: {
-      //     'Authorization': 'Bearer sk-live-DHD8chim4wQcPJwKaF7W9xjj7vmA3F3qirlIq0AY'
-      //   }
-      // });
-      
-      // For now, using mock data
-      setTimeout(() => {
-        setMarketData(mockMarketData);
-        setLoading(false);
-      }, 1000);
-      
-    } catch (err) {
-      setError("Failed to fetch market data. Please try again.");
-      setLoading(false);
-      console.error("Market data fetch error:", err);
+      const { error } = await supabase
+        .from('watchlist')
+        .insert([
+          {
+            user_id: user.id,
+            symbol,
+            company_name: companyName
+          }
+        ]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error("Stock already in watchlist");
+        } else {
+          toast.error("Failed to add to watchlist");
+        }
+      } else {
+        setWatchlist([...watchlist, symbol]);
+        toast.success("Added to watchlist");
+      }
+    } catch (error) {
+      toast.error("Failed to add to watchlist");
     }
   };
 
   useEffect(() => {
-    fetchMarketData();
-  }, []);
+    const fetchWatchlist = async () => {
+      if (!user) return;
 
-  const filteredData = marketData.filter(stock =>
-    stock.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    stock.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      const { data } = await supabase
+        .from('watchlist')
+        .select('symbol')
+        .eq('user_id', user.id);
+
+      if (data) {
+        setWatchlist(data.map(item => item.symbol));
+      }
+    };
+
+    fetchWatchlist();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-dark">
@@ -108,141 +233,141 @@ const Markets = () => {
         <div className="container mx-auto">
           {/* Header */}
           <div className="mb-8 animate-fade-in">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-4xl font-bold gradient-text mb-2">Live Markets</h1>
-                <p className="text-gray-300">Real-time Indian stock market data</p>
-              </div>
-              <Button 
-                onClick={fetchMarketData}
-                disabled={loading}
-                className="mt-4 md:mt-0 bg-gradient-gold text-trading-dark hover:opacity-90"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh Data
-              </Button>
+            <h1 className="text-4xl font-bold gradient-text mb-2">Indian Stock Market</h1>
+            <p className="text-gray-300">Live market data and real-time insights</p>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search stocks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-trading-card border-trading-gold/30 text-white placeholder:text-gray-400 focus:border-trading-gold"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {sectors.map(sector => (
+                <Button
+                  key={sector}
+                  variant={selectedSector === sector ? "default" : "outline"}
+                  onClick={() => setSelectedSector(sector)}
+                  className={selectedSector === sector 
+                    ? "bg-gradient-gold text-trading-dark" 
+                    : "border-trading-gold/30 text-gray-300 hover:bg-trading-gold hover:text-trading-dark"
+                  }
+                >
+                  {sector}
+                </Button>
+              ))}
             </div>
           </div>
 
-          {/* Search */}
-          <Card className="glass-card glow-border mb-8 animate-slide-up">
-            <CardContent className="p-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search stocks by name or symbol..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-trading-card border-trading-gold/30 text-white placeholder:text-gray-400 focus:border-trading-gold"
-                />
+          {/* Market Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="glass-card glow-border">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-400">NIFTY 50</p>
+                    <p className="text-2xl font-bold text-white">22,456.75</p>
+                    <p className="text-trading-green">+234.50 (+1.06%)</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-trading-green" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="glass-card glow-border">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-400">SENSEX</p>
+                    <p className="text-2xl font-bold text-white">74,123.45</p>
+                    <p className="text-trading-green">+456.78 (+0.62%)</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-trading-green" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card glow-border">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-400">BANK NIFTY</p>
+                    <p className="text-2xl font-bold text-white">45,678.90</p>
+                    <p className="text-trading-red">-123.45 (-0.27%)</p>
+                  </div>
+                  <TrendingDown className="h-8 w-8 text-trading-red" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Stocks Table */}
+          <Card className="glass-card glow-border">
+            <CardHeader>
+              <CardTitle className="text-trading-gold">Market Stocks</CardTitle>
+              <CardDescription className="text-gray-300">
+                Real-time stock prices and market data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <div className="space-y-4">
+                  {filteredStocks.map((stock, index) => (
+                    <div key={stock.symbol} className="flex items-center justify-between p-4 rounded-lg bg-trading-card/30 border border-trading-gold/20 hover:border-trading-gold/50 transition-all">
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-white">{stock.symbol}</h3>
+                            <Badge variant="outline" className="text-xs border-trading-gold/30 text-gray-400">
+                              {stock.sector}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-400">{stock.name}</p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="font-bold text-white">₹{stock.price.toLocaleString('en-IN')}</p>
+                          <p className={`text-sm ${stock.change >= 0 ? 'text-trading-green' : 'text-trading-red'}`}>
+                            {stock.change >= 0 ? '+' : ''}₹{Math.abs(stock.change).toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                          </p>
+                        </div>
+
+                        <div className="text-right text-sm text-gray-400">
+                          <p>Vol: {stock.volume}</p>
+                          <p>MCap: {stock.marketCap}</p>
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addToWatchlist(stock.symbol, stock.name)}
+                            disabled={watchlist.includes(stock.symbol)}
+                            className="border-trading-gold/30 text-gray-300 hover:bg-trading-gold hover:text-trading-dark"
+                          >
+                            {watchlist.includes(stock.symbol) ? <Star className="h-4 w-4 fill-current" /> : <Star className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-gradient-gold text-trading-dark hover:opacity-90"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Market Data */}
-          {error && (
-            <Card className="glass-card border-red-500 mb-8">
-              <CardContent className="p-6 text-center">
-                <p className="text-red-400">{error}</p>
-                <Button 
-                  onClick={fetchMarketData} 
-                  className="mt-4 bg-gradient-gold text-trading-dark hover:opacity-90"
-                >
-                  Try Again
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="glass-card animate-pulse">
-                  <CardContent className="p-6">
-                    <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                    <div className="h-6 bg-gray-700 rounded mb-4"></div>
-                    <div className="h-4 bg-gray-700 rounded"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredData.map((stock, index) => (
-                <Card 
-                  key={stock.symbol} 
-                  className="glass-card glow-border hover-glow transition-all duration-300 hover:scale-105 animate-fade-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-trading-gold text-lg">{stock.symbol}</CardTitle>
-                    <CardDescription className="text-gray-300 text-sm">
-                      {stock.name}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-white">
-                          ₹{stock.price.toFixed(2)}
-                        </span>
-                        <div className={`flex items-center space-x-1 ${
-                          stock.change >= 0 ? 'text-trading-green' : 'text-trading-red'
-                        }`}>
-                          {stock.change >= 0 ? 
-                            <TrendingUp className="w-4 h-4" /> : 
-                            <TrendingDown className="w-4 h-4" />
-                          }
-                          <span className="font-semibold">
-                            {stock.change >= 0 ? '+' : ''}₹{stock.change.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className={`text-center py-2 px-3 rounded-lg ${
-                        stock.changePercent >= 0 
-                          ? 'bg-trading-green/20 text-trading-green' 
-                          : 'bg-trading-red/20 text-trading-red'
-                      }`}>
-                        <span className="font-semibold">
-                          {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-400">High:</span>
-                          <span className="ml-2 text-white">₹{stock.high.toFixed(2)}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Low:</span>
-                          <span className="ml-2 text-white">₹{stock.low.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-400">Volume:</span>
-                          <span className="ml-2 text-white">{stock.volume.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-
-                      <Button className="w-full bg-gradient-gold text-trading-dark hover:opacity-90 font-semibold">
-                        Add to Watchlist
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {filteredData.length === 0 && !loading && !error && (
-            <Card className="glass-card glow-border">
-              <CardContent className="p-12 text-center">
-                <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-300 mb-2">No stocks found</h3>
-                <p className="text-gray-400">Try adjusting your search terms</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

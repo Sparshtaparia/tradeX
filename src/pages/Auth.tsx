@@ -1,21 +1,34 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: ""
   });
+
+  const { signUp, signIn, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -24,12 +37,41 @@ const Auth = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // Here you would typically handle authentication
-    // For now, we'll just redirect to dashboard
-    window.location.href = "/dashboard";
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        if (formData.password !== formData.confirmPassword) {
+          toast.error("Passwords don't match");
+          return;
+        }
+        if (formData.password.length < 6) {
+          toast.error("Password must be at least 6 characters");
+          return;
+        }
+        
+        const { error } = await signUp(formData.email, formData.password, formData.name);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Account created successfully! Please check your email to verify your account.");
+        }
+      } else {
+        const { error } = await signIn(formData.email, formData.password);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Welcome back!");
+          navigate('/dashboard');
+        }
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,11 +79,8 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center space-x-2 group">
-            <div className="w-12 h-12 bg-gradient-gold rounded-xl flex items-center justify-center group-hover:animate-glow transition-all duration-300">
-              <TrendingUp className="w-7 h-7 text-trading-dark" />
-            </div>
-            <span className="text-2xl font-bold gradient-text">TradeAI Pro</span>
+          <Link to="/" className="inline-block group">
+            <Logo size="lg" />
           </Link>
         </div>
 
@@ -141,9 +180,10 @@ const Auth = () => {
 
               <Button 
                 type="submit" 
+                disabled={loading}
                 className="w-full bg-gradient-gold hover:opacity-90 text-trading-dark font-semibold py-3 text-lg animate-glow"
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {loading ? "Please wait..." : (isSignUp ? "Create Account" : "Sign In")}
               </Button>
             </form>
 

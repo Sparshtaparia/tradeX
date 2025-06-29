@@ -9,7 +9,180 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_insights: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          description: string
+          id: string
+          insight_type: string
+          is_read: boolean | null
+          symbol: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          description: string
+          id?: string
+          insight_type: string
+          is_read?: boolean | null
+          symbol?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          insight_type?: string
+          is_read?: boolean | null
+          symbol?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portfolio: {
+        Row: {
+          avg_price: number
+          company_name: string
+          created_at: string
+          current_price: number | null
+          current_value: number | null
+          id: string
+          profit_loss: number | null
+          quantity: number
+          symbol: string
+          total_invested: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_price: number
+          company_name: string
+          created_at?: string
+          current_price?: number | null
+          current_value?: number | null
+          id?: string
+          profit_loss?: number | null
+          quantity?: number
+          symbol: string
+          total_invested: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_price?: number
+          company_name?: string
+          created_at?: string
+          current_price?: number | null
+          current_value?: number | null
+          id?: string
+          profit_loss?: number | null
+          quantity?: number
+          symbol?: string
+          total_invested?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trades: {
+        Row: {
+          company_name: string
+          created_at: string
+          id: string
+          notes: string | null
+          price: number
+          quantity: number
+          symbol: string
+          total_amount: number
+          trade_date: string
+          trade_type: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price: number
+          quantity: number
+          symbol: string
+          total_amount: number
+          trade_date?: string
+          trade_type: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          quantity?: number
+          symbol?: string
+          total_amount?: number
+          trade_date?: string
+          trade_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      watchlist: {
+        Row: {
+          added_at: string
+          company_name: string
+          id: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          company_name: string
+          id?: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          company_name?: string
+          id?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
