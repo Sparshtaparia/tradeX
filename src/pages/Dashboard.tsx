@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { TrendingUp, TrendingDown, DollarSign, BarChart, Bell, MessageCircle, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 interface PortfolioSummary {
   totalValue: number;
@@ -25,6 +26,8 @@ interface Trade {
   total_amount: number;
   trade_date: string;
   created_at: string;
+  notes: string;
+  user_id: string;
 }
 
 interface AIInsight {
@@ -36,6 +39,7 @@ interface AIInsight {
   confidence_score?: number;
   created_at: string;
   is_read: boolean;
+  user_id: string;
 }
 
 const Dashboard = () => {
@@ -94,7 +98,12 @@ const Dashboard = () => {
       .limit(5);
 
     if (trades) {
-      setRecentTrades(trades);
+      // Type assertion to ensure proper typing
+      const typedTrades = trades.map(trade => ({
+        ...trade,
+        trade_type: trade.trade_type as 'BUY' | 'SELL'
+      }));
+      setRecentTrades(typedTrades);
     }
   };
 
@@ -109,7 +118,12 @@ const Dashboard = () => {
       .limit(5);
 
     if (insights) {
-      setAiInsights(insights);
+      // Type assertion to ensure proper typing
+      const typedInsights = insights.map(insight => ({
+        ...insight,
+        insight_type: insight.insight_type as 'BUY' | 'SELL' | 'HOLD' | 'ALERT'
+      }));
+      setAiInsights(typedInsights);
     }
   };
 
@@ -201,10 +215,12 @@ const Dashboard = () => {
                       <BarChart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-300 mb-2">No trades yet</h3>
                       <p className="text-gray-400 mb-4">Start by adding your first trade to see it here</p>
-                      <Button className="bg-gradient-gold text-trading-dark hover:opacity-90">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add First Trade
-                      </Button>
+                      <Link to="/portfolio">
+                        <Button className="bg-gradient-gold text-trading-dark hover:opacity-90">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add First Trade
+                        </Button>
+                      </Link>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -282,9 +298,11 @@ const Dashboard = () => {
                   <div className="text-center py-6">
                     <MessageCircle className="h-12 w-12 text-trading-gold mx-auto mb-4" />
                     <p className="text-gray-300 mb-4">Ask me about market trends, trading strategies, or get personalized recommendations!</p>
-                    <Button className="bg-gradient-gold text-trading-dark hover:opacity-90">
-                      Start Chat
-                    </Button>
+                    <Link to="/ai-insights">
+                      <Button className="bg-gradient-gold text-trading-dark hover:opacity-90">
+                        Start Chat
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
